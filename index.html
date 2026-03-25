@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>가위바위보 게임</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    transition: 0.3s;
+    background: #f5f5f5;
+    color: #333;
+  }
+  .dark {
+    background: #121212;
+    color: #eee;
+  }
+  .top-buttons {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+  button {
+    padding: 10px 15px;
+    margin: 5px;
+    cursor: pointer;
+  }
+  .scoreboard {
+    font-size: 20px;
+    margin: 15px;
+  }
+  .choices button {
+    font-size: 18px;
+  }
+  #result {
+    font-size: 24px;
+    margin: 20px;
+  }
+  canvas {
+    max-width: 600px;
+    margin: auto;
+  }
+
+  /* 🎉 축하 애니메이션 */
+  .confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    background: red;
+    animation: fall 2s linear infinite;
+  }
+  @keyframes fall {
+    from { transform: translateY(-100px); }
+    to { transform: translateY(100vh); }
+  }
+
+  table {
+    margin: auto;
+    border-collapse: collapse;
+  }
+  td, th {
+    border: 1px solid #ccc;
+    padding: 8px;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="top-buttons">
+  <button onclick="toggleDarkMode()">🌙 다크모드</button>
+  <button onclick="toggleStats()">📊 승률표</button>
+</div>
+
+<h1>✊✋✌ 가위바위보</h1>
+
+<div class="scoreboard">
+  나: <span id="playerScore">0</span> |
+  컴퓨터: <span id="computerScore">0</span>
+</div>
+
+<div class="choices">
+  <button onclick="play('가위')">✌ 가위</button>
+  <button onclick="play('바위')">✊ 바위</button>
+  <button onclick="play('보')">✋ 보</button>
+</div>
+
+<div id="result"></div>
+
+<h3 id="finalMessage"></h3>
+<button id="restartBtn" onclick="resetGame()" style="display:none;">다시하기</button>
+
+<!-- 승률 테이블 -->
+<div id="statsTable" style="display:none;">
+  <h3>📊 승률 테이블</h3>
+  <table>
+    <tr><th>총 게임</th><th>승</th><th>패</th><th>승률</th></tr>
+    <tr>
+      <td id="total"></td>
+      <td id="win"></td>
+      <td id="lose"></td>
+      <td id="rate"></td>
+    </tr>
+  </table>
+</div>
+
+<h3>📈 승률 그래프</h3>
+<canvas id="chart"></canvas>
+
+<script>
+let playerScore = 0;
+let computerScore = 0;
+let win = 0;
+let lose = 0;
+let total = 0;
+
+let history = [];
+
+const choices = ["가위","바위","보"];
+
+const ctx = document.getElementById('chart').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [{
+      label: '승률 (%)',
+      data: [],
+      borderWidth: 2
+    }]
+  }
+});
+
+function play(player) {
+  if (playerScore === 3 || computerScore === 3) return;
+
+  const computer = choices[Math.floor(Math.random() * 3)];
+
+  let result = "";
+
+  if (player === computer) {
+    result = "무승부!";
+  } else if (
+    (player === "가위" && computer === "보") ||
+    (player === "바위" && computer === "가위") ||
+    (player === "보" && computer === "바위")
+  ) {
+    result = "승리!";
+    playerScore++;
+    win++;
+  } else {
+    result = "패배!";
+    computerScore++;
+    lose++;
+  }
+
+  total++;
+
+  document.getElementById("playerScore").innerText = playerScore;
+  document.getElementById("computerScore").innerText = computerScore;
+  document.getElementById("result").innerText =
+    `당신: ${player} | 컴퓨터: ${computer} → ${result}`;
+
+  updateStats();
+  updateChart();
+
+  if (playerScore === 3) {
+    showFinal("🎉 축하합니다! 당신이 이겼어요!");
+    launchConfetti();
+  } else if (computerScore === 3) {
+    showFinal("😢 아쉽네요... 다음엔 이길 수 있어요!");
+  }
+}
+
+function showFinal(message) {
+  document.getElementById("finalMessage").innerText = message;
+  document.getElementById("restartBtn").style.display = "inline-block";
+}
+
+function resetGame() {
+  playerScore = 0;
+  computerScore = 0;
+  document.getElementById("playerScore").innerText = 0;
+  document.getElementById("computerScore").innerText = 0;
+  document.getElementById("finalMessage").innerText = "";
+  document.getElementById("restartBtn").style.display = "none";
+}
+
+function toggleDarkMode() {
+  document.body.classList.toggle("dark");
+}
+
+function toggleStats() {
+  const table = document.getElementById("statsTable");
+  table.style.display = table.style.display === "none" ? "block" : "none";
+}
+
+function updateStats() {
+  document.getElementById("total").innerText = total;
+  document.getElementById("win").innerText = win;
+  document.getElementById("lose").innerText = lose;
+  const rate = total ? ((win / total) * 100).toFixed(1) : 0;
+  document.getElementById("rate").innerText = rate + "%";
+}
+
+function updateChart() {
+  const rate = total ? ((win / total) * 100).toFixed(1) : 0;
+  history.push(rate);
+
+  chart.data.labels.push(history.length);
+  chart.data.datasets[0].data.push(rate);
+  chart.update();
+}
+
+function launchConfetti() {
+  for (let i = 0; i < 50; i++) {
+    const div = document.createElement("div");
+    div.className = "confetti";
+    div.style.left = Math.random() * 100 + "vw";
+    div.style.background = `hsl(${Math.random()*360},100%,50%)`;
+    div.style.animationDuration = (Math.random()*2+1)+"s";
+    document.body.appendChild(div);
+
+    setTimeout(() => div.remove(), 2000);
+  }
+}
+</script>
+
+</body>
+</html>
